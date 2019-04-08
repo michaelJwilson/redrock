@@ -56,7 +56,6 @@ class PlotSpec(object):
 
         plt.ion()
         self.plot()
-
         plt.show(block=True)
 
     def _onkeypress(self, event):
