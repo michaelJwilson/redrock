@@ -18,7 +18,8 @@ class ZWarningMask(object):
     NEGATIVE_MODEL    = 2**3  #- synthetic spectrum is negative
     MANY_OUTLIERS     = 2**4  #- fraction of points more than 5 sigma away from best model is too large (>0.05)
     Z_FITLIMIT        = 2**5  #- chi-squared minimum at edge of the redshift fitting range
-    NEGATIVE_EMISSION = 2**6  #- a QSO line exhibits negative emission, triggered only in QSO spectra, if  C_IV, C_III, Mg_II, H_beta, or H_alpha has LINEAREA + 3 * LINEAREA_ERR < 0
+    NEGATIVE_EMISSION = 2**6  #- a QSO line exhibits negative emission, triggered only in QSO spectra, 
+                              #- if  C_IV, C_III, Mg_II, H_beta, or H_alpha has LINEAREA + 3 * LINEAREA_ERR < 0
     UNPLUGGED         = 2**7  #- the fiber was unplugged/broken, so no spectrum obtained
     BAD_TARGET        = 2**8  #- catastrophically bad targeting data
     NODATA            = 2**9  #- No data for this fiber, e.g. because spectrograph was broken during this exposure (ivar=0 for all pixels)

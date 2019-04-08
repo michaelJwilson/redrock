@@ -1,0 +1,15 @@
+INFO:io.py:955:read_basis_templates: Reading /global/homes/m/mjwilson/desi/BEAST/desihub//basis_templates/v3.0/elg_templates_v2.1.fits
+INFO:io.py:955:read_basis_templates: Reading /global/homes/m/mjwilson/desi/BEAST/desihub//basis_templates/v3.0/lrg_templates_v2.1.fits
+INFO:io.py:955:read_basis_templates: Reading /global/homes/m/mjwilson/desi/BEAST/desihub//basis_templates/v3.0/bgs_templates_v2.2.fits
+RR: Fitting for 10 basis vectors
+       iter        R2             rchi2
+EMPCA  1/10       0.00316919     31.49746718
+EMPCA  2/10       0.93814113      1.90622015
+EMPCA  3/10       0.99687075      0.09523091
+EMPCA  4/10       0.99776217      0.06794360
+EMPCA  5/10       0.99845658      0.04684941
+EMPCA  6/10       0.99900504      0.03019915
+EMPCA  7/10       0.99928782      0.02161502
+EMPCA  8/10       0.99940855      0.01795035
+EMPCA  9/10       0.99945919      0.01641289
+EMPCA 10/10       0.99948280      0.01569628

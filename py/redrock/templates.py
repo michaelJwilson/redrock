@@ -1,6 +1,6 @@
-"""
+'''
 Classes and functions for templates.
-"""
+'''
 
 from __future__ import absolute_import, division, print_function
 
@@ -63,6 +63,7 @@ class Template(object):
             try:
                 redshifts = native_endian(fx['REDSHIFTS'].data)
                 old_style_templates = False
+
             except KeyError:
                 pass
 
@@ -80,6 +81,9 @@ class Template(object):
                 elif self._rrtype == 'QSO':
                     self._redshifts = 10**np.arange(np.log10(1+0.05),
                         np.log10(1+6.0), 5e-4) - 1
+                elif self._rrtype in ['Q0_199', 'Q2_198', 'Q3_199', 'QX_811', 'Q4_198', 'LBG', 'BC03']:
+                    self._redshifts = 10**np.arange(np.log10(1.+1.5),
+                                                    np.log10(1.+4.9), 5e-4) - 1
                 else:
                     raise ValueError("Unknown redshift range to use for "
                         "template type {}".format(self._rrtype))

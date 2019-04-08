@@ -41,7 +41,7 @@ from .._version import __version__
 from ..archetypes import All_archetypes
 
 
-def write_zbest(outfile, zbest, fibermap, template_version, archetype_version):
+def write_zbest(outfile, zbest, fibermap, template_version, archetype_version, overwrite=True):
     """Write zbest and fibermap Tables to outfile
 
     Args:
@@ -66,7 +66,7 @@ def write_zbest(outfile, zbest, fibermap, template_version, archetype_version):
     hx.append(fits.PrimaryHDU(header=header))
     hx.append(fits.convenience.table_to_hdu(zbest))
     hx.append(fits.convenience.table_to_hdu(fibermap))
-    hx.writeto(os.path.expandvars(outfile), overwrite=True)
+    hx.writeto(os.path.expandvars(outfile), overwrite=overwrite)
     return
 
 
@@ -107,6 +107,8 @@ class DistTargetsDESI(DistTargets):
         if comm is not None:
             comm_size = comm.size
             comm_rank = comm.rank
+
+        print(spectrafiles)
 
         # check the file list
         if isinstance(spectrafiles, basestring):
@@ -488,6 +490,9 @@ def rrdesi(options=None, comm=None):
     
     parser.add_argument("--cosmics-nsig", type=float, default=0,
         required=False, help="n sigma cosmic ray threshold in coaddition")
+
+    parser.add_argument("--clobber", type=bool, default=True,
+        required=False, help="Clobber output files.  Default: True.")
     
     parser.add_argument("infiles", nargs='*')
 
@@ -650,7 +655,7 @@ def rrdesi(options=None, comm=None):
                 if not args.archetypes is None:
                     archetypes = All_archetypes(archetypes_dir=args.archetypes).archetypes
                     archetype_version = {name:arch._version for name, arch in archetypes.items() }
-                write_zbest(args.zbest, zbest, targets.fibermap, template_version, archetype_version)
+                write_zbest(args.zbest, zbest, targets.fibermap, template_version, archetype_version, overwrite=args.clobber)
 
             stop = elapsed(start, "Writing zbest data took", comm=comm)
 

@@ -15,14 +15,18 @@ from __future__ import absolute_import, division, print_function
 import sys, os
 import random
 import optparse
+import pylab as pl
 
 import numpy as np
 from astropy.io import fits
+from astropy import units as u
 from empca import empca
 import redrock
 
 from desisim.templates import STAR
 from desispec.interpolation import resample_flux
+from astropy.modeling.blackbody import blackbody_lambda, blackbody_nu
+
 
 parser = optparse.OptionParser(usage = "%prog [options]")
 parser.add_option("-o", "--outfile", type=str,  help="Output filename")
@@ -30,6 +34,7 @@ parser.add_option("--niter", type=int,  help="Number of EMPCA iterations to run 
 parser.add_option("--nvec", type=int,  help="Number of basis vectors to generate [%default]", default=5)
 parser.add_option("--seed", type=int,  help="Seed for desisim.templates.STAR [%default]", default=12345)
 parser.add_option('--version', type=str, help='Template version')
+parser.add_option('--nearir', type=int, help='Wavelength extension to the nearir')
 
 opts, args = parser.parse_args()
 
@@ -41,9 +46,35 @@ if opts.outfile is None:
 
 #- Generate templates and resample to 0.1A grid
 dw = 0.1
-wave = np.arange(3000, 11000+dw/2, dw)
-nstar = 10000
-tflux, twave, meta, tobjmeta = STAR().make_templates(nstar, restframe=True,seed=opts.seed)
+
+if opts.nearir:
+  ##  https://nbviewer.jupyter.org/github/desihub/desisim/blob/master/doc/nb/star-templates.ipynb                                                                                                   
+  ##  https://arxiv.org/abs/1807.06049                                                                                                                                                             
+  ##                                                                                                                                                                                               
+  ##                                                                                                                                                                                               
+  ##  Must set:                                                                                                                                                                                   
+  ##         export  DESI_BASIS_TEMPLATES=$DESIHUB/basis_templates/v2.6/                                                                                                                           
+  ##                                                                                                                                                                                               
+  ##  Note:  v3.3 has finer spectral coverage, but stops at 1.1um.                                                                                                                                  
+  ##         v2.6 extends to 65000.   
+
+  os.system('export  DESI_BASIS_TEMPLATES=$DESIHUB/basis_templates/v2.6/')
+  os.system('echo   $DESI_BASIS_TEMPLATES')
+  
+  wave = np.arange(3000, 13000+dw/2, dw)
+  
+else:
+  wave = np.arange(3000, 11000+dw/2, dw)
+
+nstar = np.int(100) ## 00
+tflux, twave, meta, tobjmeta = STAR(maxwave=wave.max()).make_templates(nstar, restframe=True,seed=opts.seed)
+
+print(tobjmeta)
+
+##  pl.plot(twave, tflux[0,:] / tflux[0,:].max())
+##  pl.plot(2. * twave, blackbody_lambda(2. * twave * u.AA, tobjmeta['TEFF'][0]) / blackbody_lambda(2. * twave * u.AA, tobjmeta['TEFF'][0]).max())  ##  erg / (Angstrom cm2 s sr)
+##  pl.show()
+
 flux = np.zeros((nstar, wave.size))
 for i in range(nstar):
     flux[i] = resample_flux(wave, twave, tflux[i])

@@ -56,7 +56,8 @@ class PlotSpec(object):
 
         plt.ion()
         self.plot()
-        plt.show()
+
+        plt.show(block=True)
 
     def _onkeypress(self, event):
         ### print('key', event.key)
@@ -115,7 +116,7 @@ class PlotSpec(object):
             force_ylim = self._ax1.get_ylim()
 
         self._ax1.clear()
-        for spectype, fmt in [('STAR', 'k-'), ('GALAXY', 'b-'), ('QSO', 'g-')]:
+        for spectype, fmt in [('STAR', 'k-'), ('GALAXY', 'b-'), ('QSO', 'g-'), ('LBG', 'c-')]:
             if spectype in self.zscan[target.id]:
                 zx = self.zscan[target.id][spectype]
                 self._ax1.plot(zx['redshifts'], zx['zchi2'], fmt, alpha=0.2,
@@ -144,6 +145,7 @@ class PlotSpec(object):
             zz['z'], zz['spectype']))
         self._ax1.set_ylabel(r'$\chi^2$')
         self._ax1.set_xlabel('redshift')
+        
         if keepzoom:
             self._ax1.set_xlim(*force_xlim)
             self._ax1.set_ylim(*force_ylim)
@@ -158,7 +160,7 @@ class PlotSpec(object):
         specs_to_read = target.spectra
         for spec in specs_to_read:
             if self.archetypes:
-                mx = tp.eval(zz['subtype'], dwave, coeff, spec.wave, zz['z']) * (1+zz['z'])
+                mx = tp.eval(zz['subtype'], dwave, coeff, spec.wave, zz['z']) * (1. + zz['z'])
             else:
                 mx = tp.eval(coeff[0:tp.nbasis], spec.wave, zz['z']) * (1+zz['z'])
             model = spec.R.dot(mx)
@@ -167,6 +169,7 @@ class PlotSpec(object):
             ## model[isbad] = mx[isbad]
             flux[isbad] = np.NaN
             self._ax2.plot(spec.wave, medfilt(flux, self.smooth), alpha=0.5)
+            self._ax2.plot(spec.wave, medfilt(flux,        11), alpha=0.3, c='k')
             self._ax2.plot(spec.wave, medfilt(mx, self.smooth), 'k:', alpha=0.8)
             model[isbad] = np.NaN
             self._ax2.plot(spec.wave, medfilt(model, self.smooth), 'k-',
@@ -207,7 +210,7 @@ class PlotSpec(object):
             self._ax2.set_ylim(*force_ylim)
         else:
             self._ax2.set_ylim(ymin, ymax)
-            self._ax2.set_xlim(3500,10100)
+            ##  self._ax2.set_xlim(3500,10100)
 
         self._ax2.set_ylabel('flux')
         self._ax2.set_xlabel('wavelength [A]')

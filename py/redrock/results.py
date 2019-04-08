@@ -34,7 +34,7 @@ def write_zscan(filename, zscan, zfit, clobber=False):
     import h5py
     filename = os.path.expandvars(filename)
     if clobber and os.path.exists(filename):
-        os.remove(filename)
+      os.remove(filename)
 
     zfit = zfit.copy()
 
@@ -132,6 +132,7 @@ def read_zscan(filename):
         zfit.replace_column('subtype', encode_column(zfit['subtype']))
 
     return zscan, zfit
+
 def read_zscan_redrock(filename):
     """Read redrock.zfind results from a file to be reused by redrock itself.
 

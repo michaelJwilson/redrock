@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""
+'''
 Make a redrock template
 
 This code uses DESI templates and code from
@@ -8,28 +8,39 @@ This code uses DESI templates and code from
 https://github.com/desihub/desispec
 https://github.com/desihub/desisim
 https://github.com/sbailey/empca
+'''
 
-"""
-from __future__ import absolute_import, division, print_function
+from   __future__ import absolute_import, division, print_function
 
 import sys, os
 import random
 import optparse
-
+import astropy.units as u
+import astropy.constants as const
+import pylab as pl
 import numpy as np
-from astropy.io import fits
-from empca import empca
+from   astropy.io import fits
+from   empca import empca
 import redrock
 
-from desisim.templates import ELG, LRG, BGS
-from desispec.interpolation import resample_flux
+from   desisim.templates import ELG, LRG, BGS
+from   desispec.interpolation import resample_flux
+from   lbg_maker import lbg_maker
+from   BC03_maker import BC03_maker
+
+##  USAGE:
+##  rrgaltemplate -o ./rrtemplate-LBG.fits  --nvec 5 --addline 0 --rrtype LBG --nearir 0
+##  rrgaltemplate -o ./rrtemplate-BC03.fits --nvec 5 --addline 0 --rrtype BC03 --nearir 1
 
 parser = optparse.OptionParser(usage = "%prog [options]")
-parser.add_option("-o", "--outfile", type=str,  help="Output filename")
 parser.add_option("--niter", type=int,  help="Number of EMPCA iterations to run [%default]", default=10)
 parser.add_option("--nvec", type=int,  help="Number of basis vectors to generate [%default]", default=10)
 parser.add_option("--seed", type=int,  help="Seed for desisim.templates.ELG and LRG [%default]", default=123456)
 parser.add_option('--version', type=str, help='Template version')
+parser.add_option('--addline', type=int, default=0, help='Include a restframe Ly-a line template; Bool {0,1}')
+parser.add_option('--rrtype', type=str, default='GALAXY', help='RR type for template header.')
+parser.add_option('--nearir', type=int, default=0, help='Wavelength extension to cover pfs 1.3um.')
+parser.add_option("-o", "--outfile",  type=str, help="Output filename")
 
 opts, args = parser.parse_args()
 
@@ -42,49 +53,145 @@ if opts.outfile is None:
 #- Generate templates and resample to 0.1A grid that covers
 #- z=0 to 1.85 for obsframe wavelengths 3500 to 11000, purposefully
 #- avoiding Lyman-alpha to focus PCA variations on other lines
-dw = 0.1
-wave = np.arange(3500/(1+1.85), 11000+dw/2, dw)
-nelg = 10000
-nlrg = 5000
-nbgs = 5000
+dw      = 0.1
+
+if opts.nearir:
+    ## wave      = np.arange(3500/(1+1.85), 11000 + dw/2, dw)
+    wave         = np.arange(3500/(1+5.00), 13000 + dw/2, dw)
+    hiwave       = 1.3e4
+
+    opts.outfile = opts.outfile.split('.fits')[0] + '-nearir.fits'
+
+else:
+    wave         = np.arange(3500/(1 + 5.00), 11000 + dw/2, dw)
+    hiwave       = 1.0e4  
+
+nelg = np.int(1 * 1e4)
+nlrg = np.int(5 * 1e3)
+nbgs = np.int(5 * 1e3)
+nlbg = np.int(5)
+
+'''
+##  ELG templates. 
 tflux, twave, tmeta, tobjmeta = ELG().make_templates(nelg, restframe=True, nocolorcuts=True,seed=opts.seed)
 elgflux = np.zeros((nelg, wave.size))
 for i in range(nelg):
     elgflux[i] = resample_flux(wave, twave, tflux[i])
 
+##  LRG templates
 tflux, twave, tmeta, tobjmeta = LRG().make_templates(nlrg, restframe=True, nocolorcuts=True,seed=opts.seed+nelg)
 lrgflux = np.zeros((nlrg, wave.size))
 for i in range(nlrg):
     lrgflux[i] = resample_flux(wave, twave, tflux[i])
 
+##  BGS templates
 tflux, twave, tmeta, tobjmeta = BGS().make_templates(nbgs, restframe=True, nocolorcuts=True,seed=opts.seed+nelg+nbgs)
 bgsflux = np.zeros((nbgs, wave.size))
 for i in range(nbgs):
     bgsflux[i] = resample_flux(wave, twave, tflux[i])
+'''
 
-flux = np.vstack([elgflux, lrgflux])
-flux = np.vstack([flux, bgsflux])
+##  Shapley Composites
+if nlbg > 5:
+    raise ValueError('\n\nOnly 5 distinct Shapley composites are available - differing by EW.')
+
+if opts.nvec > 5:
+    raise ValueError('\n\nOnly 5 distinct Shapley composites are available - differing by EW - cannot have more eigenvectors.')
+
+tflux, twave, tmeta  = lbg_maker(ngal=nlbg, restframe=True, printit=False, test=False, seed=314, redshifts=None, magnitudes=None, hiwave=hiwave)
+lbgflux              = np.zeros((nlbg, wave.size))
+
+for i in range(nlbg):
+    lbgflux[i] = resample_flux(wave, twave, tflux[i])
+
+'''
+##  BC03 templates. 
+tflux, twave, tmeta  = BC03_maker(ngal=None, restframe=True, printit=False, test=False, seed=314, redshifts=None, magnitudes=None, hiwave=hiwave)
+nBC03                = tflux.shape[0]
+BC03flux             = np.zeros((nBC03, wave.size))
+
+for i in range(nBC03):                                                                                                                      
+    BC03flux[i] = resample_flux(wave, twave, tflux[i])
+'''
+## flux = np.vstack([elgflux, lrgflux])
+## flux = np.vstack([flux, bgsflux])
+## flux = np.vstack([flux, lbgflux])
+flux = lbgflux
+## flux = BC03flux
 
 #- Normalize spectra so that PCA captures variance rather than normalization
 for i in range(flux.shape[0]):
     flux[i] /= np.median(flux[i])
 
+for i, x in enumerate(flux):
+    pl.semilogy(wave, x)
+
+## pl.ylim(0.0, 6.0)
+pl.savefig(os.environ['BEAST'] + '/rrtemplate/plots/inspec.pdf')
+
+## Save number of independent spectra. 
+nspec = flux.shape[0]
+
 #- EMPCA fit
-print('RR: Fitting for basis vectors')
+print('RR: Fitting for %d basis vectors' % opts.nvec)
 model = empca(flux, niter=opts.niter, nvec=opts.nvec)
 
 #- Determine normalized coefficients for all inputs
-print('RR: Normalizing coefficients for all inputs')
+print('RR: Normalizing coefficients for all inputs.')
 # model.set_data(data, weights=np.ones_like(data))
 for i in range(model.coeff.shape[0]):
     model.coeff[i] /= np.linalg.norm(model.coeff[i])
+
+if opts.addline:
+  ##  Add Ly-a / Ha template. 
+  Lya = 1215.67 * u.AA
+  Ha  = 6562.80 * u.AA
+
+  linewidth  = 200. * u.km / u.s
+  dwave      = Lya * linewidth / const.c.to('km/s')
+
+  print(model.coeff.shape)
+  print(model.eigvec.shape)
+
+  print('\n\nAdding Ly-a line profile.')
+
+  def gaussian(x, mu, sig):
+    return  np.exp(- (x - mu) ** 2. / (2. * sig ** 2.))
+
+  profile    = gaussian(wave, Lya.value, dwave.value)
+  profile   /=  profile.max()
+  ##  profile   *= np.median(model.eigvec) / profile.max()
+
+  model.coeff        = np.hstack([model.coeff, np.zeros_like(model.coeff[:,0])[:,None]])
+  model.coeff        = np.vstack([model.coeff, np.zeros(opts.nvec + 1)])
+  model.coeff[-1,-1] = 0.8 ## np.median(model.coeff)
+
+  model.eigvec = np.vstack([model.eigvec, profile])
+
+  print(model.coeff.shape)
+  print(model.eigvec.shape)
+
+## Check the (eigvec, coeff) reconstruct the templates / archetypes and generally make sense. 
+atypes = model.coeff.dot(model.eigvec)
+
+print(atypes.shape)
+
+pl.clf()
+
+for i, x in enumerate(atypes):
+  pl.semilogy(wave + 30. * i, x, label=i)
+
+## pl.ylim(1.e-4, 1.)
+pl.legend(ncol=2)
+pl.yscale('log')
+pl.savefig(os.environ['BEAST'] + '/rrtemplate/plots/atypes.pdf')
 
 #- Write output
 #- TODO: move to redrock.io.write_template
 header = fits.Header()
 header['CRVAL1'] = (wave[0], 'restframe starting wavelength [Angstroms]')
 header['CDELT1'] = dw
-header['RRTYPE']   = 'GALAXY'
+header['RRTYPE']   = opts.rrtype
 header['RRSUBTYP'] = ''
 # header['RRINPUT'] = opts.infile
 header['RRVER'] = redrock.__version__
@@ -98,4 +205,6 @@ hdus.append(fits.PrimaryHDU(model.eigvec, header=header))
 hdus.append(fits.ImageHDU(model.coeff, name='ARCHETYPE_COEFF'))
 
 hdus.writeto(opts.outfile, overwrite=True)
-print('RR: Wrote '+opts.outfile)
+
+print('RR: Wrote ' + opts.outfile)
+                                
